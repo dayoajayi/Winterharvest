@@ -1,1 +1,1 @@
-"bob" 
+Given a directory/folder location, the Harvest tool will traverse each application's root directory and harvest the metadata into a readable (key-value pair) format, and generate an HTML page from it. A .meta file will reside, for example, next to the application's config file.
