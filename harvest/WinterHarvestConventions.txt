@@ -1,0 +1,7 @@
+WinterHarvest Conventions:
+
+class members - camelCase
+Interfaces - IInterfaceable
+Class Names - ClassName
+Method Names - DoThis()
+
