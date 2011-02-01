@@ -37,8 +37,10 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ConfigFileExtractor.cs" />
     <Compile Include="ExtractionPoint.cs" />
     <Compile Include="IExtractor.cs" />
+    <Compile Include="MetaDataConfigurationElement.cs" />
     <Compile Include="MetaDataElement.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
