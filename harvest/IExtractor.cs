@@ -1,8 +1,10 @@
+using System.Collections.Generic;
+
 namespace harvest
 {
     public interface IExtractor
     {
         //config file extractor
-        MetaDataElement Extract(ExtractionPoint extractionPoint);
+       IEnumerable<MetaDataElement> Extract(ExtractionPoint extractionPoint);
     }
 }

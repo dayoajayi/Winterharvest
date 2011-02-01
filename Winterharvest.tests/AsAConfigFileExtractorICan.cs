@@ -15,10 +15,9 @@ namespace Winterharvest.tests
         }
 
         [Test]
-        public void BeInstanced()
+        public void AndBeInstanced()
         {
             Assert.IsNotNull(_configFileExtractor);
-
         }
 
     }
