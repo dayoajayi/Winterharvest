@@ -1,3 +1,4 @@
+using System.Linq;
 using harvest;
 using NUnit.Framework;
 
@@ -23,7 +24,10 @@ namespace Winterharvest.tests
         [Test]
         public void AndReturnAKeyAndValueFromAConfigFile()
         {
-            Assert.AreEqual("stinky", _configFileExtractor.Extract(new ExtractionPoint()));
+            var x = _configFileExtractor.Extract(new ExtractionPoint());
+            Assert.IsNotNull(x);
+            Assert.IsInstanceOf(typeof(ConfigurationMetaDataElement), x.First());
+          //  Assert.AreEqual("stinky", _configFileExtractor.Extract(new ExtractionPoint()));
         }
     }
 }
