@@ -1,17 +1,11 @@
 ﻿<Properties>
   <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug" />
-  <MonoDevelop.Ide.Workbench ActiveDocument="Winterharvest.tests/BaseTests.cs">
-    <Files>
-      <File FileName="Winterharvest.tests/BaseTests.cs" Line="16" Column="3" />
-      <File FileName="harvest/IFinder.cs" Line="9" Column="1" />
-    </Files>
+  <MonoDevelop.Ide.Workbench>
     <Pads>
       <Pad Id="ProjectPad">
         <State expanded="True">
           <Node name="harvest" expanded="True" />
-          <Node name="Winterharvest.tests" expanded="True">
-            <Node name="a name did not start with a legal character 60 (&amp;lt;)  Line 46, position 2." selected="True" />
-          </Node>
+          <Node name="Winterharvest.tests" expanded="True" />
         </State>
       </Pad>
       <Pad Id="ClassPad">
