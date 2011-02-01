@@ -38,6 +38,8 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ExtractionPoint.cs" />
+    <Compile Include="IExtractor.cs" />
+    <Compile Include="MetaDataElement.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
