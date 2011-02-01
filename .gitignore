@@ -3,5 +3,5 @@
 [Oo]bj
 *.csproj
 *.user
-_Resharper.*
+_ReSharper.*
 *.sln.cache
