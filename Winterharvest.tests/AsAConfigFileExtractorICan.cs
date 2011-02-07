@@ -1,4 +1,5 @@
 using System.Linq;
+using System.Collections.Generic;
 using harvest;
 using NUnit.Framework;
 
@@ -27,7 +28,8 @@ namespace Winterharvest.tests
             var x = _configFileExtractor.Extract(new ExtractionPoint());
             Assert.IsNotNull(x);
             Assert.IsInstanceOf(typeof(ConfigurationMetaDataElement), x.First());
-          //  Assert.AreEqual("stinky", _configFileExtractor.Extract(new ExtractionPoint()));
+            Assert.AreEqual("poop", ((ConfigurationMetaDataElement)x.First()).Key);
+            Assert.AreEqual("stinky", ((ConfigurationMetaDataElement)x.First()).Value);
         }
     }
 }
