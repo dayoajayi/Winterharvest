@@ -19,7 +19,11 @@ namespace harvest
 
             if (!File.Exists(appPathAndName))
             {
-                throw new FileNotFoundException("You were hoping to find '{0}' but it does not exist...", appPathAndName);
+                yield return new InvalidConfigFileExtractionPoint();
+                yield break;
+                 //TODO: JPS: work with yield
+            
+
             }
 
             var configuration = ConfigurationManager.OpenExeConfiguration(appPathAndName);
