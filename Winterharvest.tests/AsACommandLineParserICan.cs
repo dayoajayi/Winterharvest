@@ -1,15 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using harvest;
+﻿using harvest;
 using NUnit.Framework;
 
 
 namespace Winterharvest.tests
 {
     [TestFixture]
-    class AsACommandLineParserICan
+   public class AsACommandLineParserICan
     {
         private CommandLineParser _commandLineParser;
 
