@@ -44,12 +44,14 @@
     <Compile Include="CommandLineArgument.cs" />
     <Compile Include="CommandLineParser.cs" />
     <Compile Include="ConfigFileExtractor.cs" />
+    <Compile Include="Dayo.cs" />
     <Compile Include="ExtractionPoint.cs" />
     <Compile Include="IExtractor.cs" />
     <Compile Include="ConfigurationMetaDataElement.cs" />
     <Compile Include="InvalidConfigFileExtractionPoint.cs" />
     <Compile Include="IParser.cs" />
     <Compile Include="MetaDataElement.cs" />
+    <Compile Include="Options.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
