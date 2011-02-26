@@ -44,6 +44,7 @@
   <ItemGroup>
     <Compile Include="AsACommandLineParserICan.cs" />
     <Compile Include="AsAConfigFileExtractorICan.cs" />
+    <Compile Include="AsAnOptionsICan.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="BaseTests.cs" />
   </ItemGroup>

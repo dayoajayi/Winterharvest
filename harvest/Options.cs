@@ -107,11 +107,9 @@
 //
 
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
-using System.Globalization;
 using System.IO;
 using System.Text.RegularExpressions;
 
@@ -119,274 +117,262 @@ using System.Text.RegularExpressions;
 using Mono.Documentation;
 #endif
 
-namespace Mono.Documentation {
+namespace harvest
+{
+    internal enum OptionValue
+    {
+        None,
+        Optional,
+        Required
+    }
 
-	enum OptionValue {
-		None, 
-		Optional,
-		Required
-	}
+    public class Options : Collection<Option>
+    {
+        private Dictionary<string, Option> options = new Dictionary<string, Option>();
 
-	public class Option {
-		string prototype, description;
-		Action<string> action;
-		string[] prototypes;
-		OptionValue type;
+        protected override void ClearItems()
+        {
+            this.options.Clear();
+        }
 
-		public Option (string prototype, string description, Action<string> action)
-		{
-			this.prototype = prototype;
-			this.prototypes = prototype.Split ('|');
-			this.description = description;
-			this.action = action;
-			this.type = GetOptionValue ();
-		}
+        protected override void InsertItem(int index, Option item)
+        {
+            Add(item);
+            base.InsertItem(index, item);
+        }
 
-		public string Prototype { get { return prototype; } }
-		public string Description { get { return description; } }
-		public Action<string> Action { get { return action; } }
+        protected override void RemoveItem(int index)
+        {
+            Option p = Items[index];
+            foreach (string name in GetOptionNames(p.Prototypes))
+            {
+                this.options.Remove(name);
+            }
+            base.RemoveItem(index);
+        }
 
-		internal string[] Prototypes { get { return prototypes; } }
-		internal OptionValue OptionValue { get { return type; } }
+        protected override void SetItem(int index, Option item)
+        {
+            RemoveItem(index);
+            Add(item);
+            base.SetItem(index, item);
+        }
 
-		OptionValue GetOptionValue ()
-		{
-			foreach (string n in Prototypes) {
-				if (n.IndexOf ('=') >= 0)
-					return OptionValue.Required;
-				if (n.IndexOf (':') >= 0)
-					return OptionValue.Optional;
-			}
-			return OptionValue.None;
-		}
+        public new Options Add(Option option)
+        {
+            foreach (string name in GetOptionNames(option.Prototypes))
+            {
+                this.options.Add(name, option);
+            }
+            return this;
+        }
 
-		public override string ToString ()
-		{
-			return Prototype;
-		}
-	}
+        public Options Add(string optionsHidesField, Action<string> action)
+        {
+            return Add(optionsHidesField, null, action);
+        }
 
-	public class Options : Collection<Option>
-	{
-		Dictionary<string, Option> options = new Dictionary<string, Option> ();
+        public Options Add(string optionsHidesField, string description, Action<string> action)
+        {
+            Option p = new Option(optionsHidesField, description, action);
+            base.Add(p);
+            return this;
+        }
 
-		protected override void ClearItems ()
-		{
-			this.options.Clear ();
-		}
+        public Options Add<T>(string optionsHidesField, Action<T> action)
+        {
+            return Add(optionsHidesField, null, action);
+        }
 
-		protected override void InsertItem (int index, Option item)
-		{
-			Add (item);
-			base.InsertItem (index, item);
-		}
+        public Options Add<T>(string optionsHidesField, string description, Action<T> action)
+        {
+            TypeConverter c = TypeDescriptor.GetConverter(typeof (T));
+            Action<string> a = delegate(string s) { action(s != null ? (T) c.ConvertFromString(s) : default(T)); };
+            return Add(optionsHidesField, description, a);
+        }
 
-		protected override void RemoveItem (int index)
-		{
-			Option p = Items [index];
-			foreach (string name in GetOptionNames (p.Prototypes)) {
-				this.options.Remove (name);
-			}
-			base.RemoveItem (index);
-		}
+        private static readonly char[] NameTerminator = new char[] {'=', ':'};
 
-		protected override void SetItem (int index, Option item)
-		{
-			RemoveItem (index);
-			Add (item);
-			base.SetItem (index, item);
-		}
+        private static IEnumerable<string> GetOptionNames(string[] names)
+        {
+            foreach (string name in names)
+            {
+                int end = name.IndexOfAny(NameTerminator);
+                if (end >= 0)
+                    yield return name.Substring(0, end);
+                else
+                    yield return name;
+            }
+        }
 
-		public new Options Add (Option option)
-		{
-			foreach (string name in GetOptionNames (option.Prototypes)) {
-				this.options.Add (name, option);
-			}
-			return this;
-		}
+        private static readonly Regex ValueOption = new Regex(
+            @"^(?<flag>--|-|/)(?<name>[^:=]+)([:=](?<value>.*))?$");
 
-		public Options Add (string options, Action<string> action)
-		{
-			return Add (options, null, action);
-		}
+        public IEnumerable<string> Parse(IEnumerable<string> optionsToParse)
+        {
+            Option p = null;
+            var process = true;
+            foreach (var option in optionsToParse)
+            {
+                if (option == "--")
+                {
+                    process = false;
+                    continue;
+                }
+                if (!process)
+                {
+                    yield return option;
+                    continue;
+                }
+                Match m = ValueOption.Match(option);
+                if (!m.Success)
+                {
+                    if (p != null)
+                    {
+                        p.Action(option);
+                        p = null;
+                    }
+                    else
+                        yield return option;
+                }
+                else
+                {
+                    string f = m.Groups["flag"].Value;
+                    string n = m.Groups["name"].Value;
+                    string v = !m.Groups["value"].Success
+                                   ? null
+                                   : m.Groups["value"].Value;
+                    do
+                    {
+                        Option p2;
+                        if (this.options.TryGetValue(n, out p2))
+                        {
+                            p = p2;
+                            break;
+                        }
+                        // no match; is it a bool option?
+                        if (n.Length >= 1 && (n[n.Length - 1] == '+' || n[n.Length - 1] == '-') &&
+                            this.options.TryGetValue(n.Substring(0, n.Length - 1), out p2))
+                        {
+                            v = n[n.Length - 1] == '+' ? n : null;
+                            p2.Action(v);
+                            p = null;
+                            break;
+                        }
+                        // is it a bundled option?
+                        if (f == "-" && this.options.TryGetValue(n[0].ToString(), out p2))
+                        {
+                            int i = 0;
+                            do
+                            {
+                                if (p2.OptionValue != OptionValue.None)
+                                    throw new InvalidOperationException(
+                                        string.Format("Unsupported using bundled option '{0}' that requires a value",
+                                                      n[i]));
+                                p2.Action(n);
+                            } while (++i < n.Length && this.options.TryGetValue(n[i].ToString(), out p2));
+                        }
 
-		public Options Add (string options, string description, Action<string> action)
-		{
-			Option p = new Option (options, description, action);
-			base.Add (p);
-			return this;
-		}
+                        // not a know option; either a value for a previous option
+                        if (p != null)
+                        {
+                            p.Action(option);
+                            p = null;
+                        }
+                            // or a stand-alone argument
+                        else
+                            yield return option;
+                    } while (false);
+                    if (p != null)
+                    {
+                        switch (p.OptionValue)
+                        {
+                            case OptionValue.None:
+                                p.Action(n);
+                                p = null;
+                                break;
+                            case OptionValue.Optional:
+                            case OptionValue.Required:
+                                if (v != null)
+                                {
+                                    p.Action(v);
+                                    p = null;
+                                }
+                                break;
+                        }
+                    }
+                }
+            }
+            if (p != null)
+            {
+                NoValue(ref p, "");
+            }
+        }
 
-		public Options Add<T> (string options, Action<T> action)
-		{
-			return Add (options, null, action);
-		}
+        private static void NoValue(ref Option p, string option)
+        {
+            if (p != null && p.OptionValue == OptionValue.Optional)
+            {
+                p.Action(null);
+                p = null;
+            }
+            else if (p != null && p.OptionValue == OptionValue.Required)
+            {
+                throw new InvalidOperationException("Expecting value after option " +
+                                                    p.Prototype + ", found " + option);
+            }
+        }
 
-		public Options Add<T> (string options, string description, Action<T> action)
-		{
-			TypeConverter c = TypeDescriptor.GetConverter (typeof(T));
-			Action<string> a = delegate (string s) {
-				action (s != null ? (T) c.ConvertFromString (s) : default(T));
-			};
-			return Add (options, description, a);
-		}
+        private const int OptionWidth = 29;
 
-		static readonly char[] NameTerminator = new char[]{'=', ':'};
-		static IEnumerable<string> GetOptionNames (string[] names)
-		{
-			foreach (string name in names) {
-				int end = name.IndexOfAny (NameTerminator);
-				if (end >= 0)
-					yield return name.Substring (0, end);
-				else 
-					yield return name;
-			}
-		}
+        public void WriteOptionDescriptions(TextWriter o)
+        {
+            foreach (Option p in this)
+            {
+                List<string> names = new List<string>(GetOptionNames(p.Prototypes));
 
-		static readonly Regex ValueOption = new Regex (
-			@"^(?<flag>--|-|/)(?<name>[^:=]+)([:=](?<value>.*))?$");
+                int written = 0;
+                if (names[0].Length == 1)
+                {
+                    Write(o, ref written, "  -");
+                    Write(o, ref written, names[0]);
+                }
+                else
+                {
+                    Write(o, ref written, "      --");
+                    Write(o, ref written, names[0]);
+                }
 
-		public IEnumerable<string> Parse (IEnumerable<string> options)
-		{
-			Option p = null;
-			bool process = true;
-			foreach (string option in options) {
-				if (option == "--") {
-					process = false;
-					continue;
-				}
-				if (!process) {
-					yield return option;
-					continue;
-				}
-				Match m = ValueOption.Match (option);
-				if (!m.Success) {
-					if (p != null) {
-						p.Action (option);
-						p = null;
-					}
-					else
-						yield return option;
-				}
-				else {
-					string f = m.Groups ["flag"].Value;
-					string n = m.Groups ["name"].Value;
-					string v = !m.Groups ["value"].Success 
-						? null 
-						: m.Groups ["value"].Value;
-					do {
-						Option p2;
-						if (this.options.TryGetValue (n, out p2)) {
-							p = p2;
-							break;
-						}
-						// no match; is it a bool option?
-						if (n.Length >= 1 && (n [n.Length-1] == '+' || n [n.Length-1] == '-') &&
-								this.options.TryGetValue (n.Substring (0, n.Length-1), out p2)) {
-							v = n [n.Length-1] == '+' ? n : null;
-							p2.Action (v);
-							p = null;
-							break;
-						}
-						// is it a bundled option?
-						if (f == "-" && this.options.TryGetValue (n [0].ToString (), out p2)) {
-							int i = 0;
-							do {
-								if (p2.OptionValue != OptionValue.None)
-									throw new InvalidOperationException (
-											string.Format ("Unsupported using bundled option '{0}' that requires a value", n [i]));
-								p2.Action (n);
-							} while (++i < n.Length && this.options.TryGetValue (n [i].ToString (), out p2));
-						}
+                for (int i = 1; i < names.Count; ++i)
+                {
+                    Write(o, ref written, ", ");
+                    Write(o, ref written, names[i].Length == 1 ? "-" : "--");
+                    Write(o, ref written, names[i]);
+                }
 
-						// not a know option; either a value for a previous option
-						if (p != null) {
-							p.Action (option);
-							p = null;
-						}
-						// or a stand-alone argument
-						else
-							yield return option;
-					} while (false);
-					if (p != null) {
-						switch (p.OptionValue) {
-							case OptionValue.None:
-								p.Action (n);
-								p = null;
-								break;
-							case OptionValue.Optional:
-							case OptionValue.Required: 
-								if (v != null) {
-									p.Action (v);
-									p = null;
-								}
-								break;
-						}
-					}
-				}
-			}
-			if (p != null) {
-				NoValue (ref p, "");
-			}
-		}
+                if (p.OptionValue == OptionValue.Optional)
+                    Write(o, ref written, "[=VALUE]");
+                else if (p.OptionValue == OptionValue.Required)
+                    Write(o, ref written, "=VALUE");
 
-		static void NoValue (ref Option p, string option)
-		{
-			if (p != null && p.OptionValue == OptionValue.Optional) {
-				p.Action (null);
-				p = null;
-			}
-			else if (p != null && p.OptionValue == OptionValue.Required) {
-				throw new InvalidOperationException ("Expecting value after option " + 
-					p.Prototype + ", found " + option);
-			}
-		}
+                if (written < OptionWidth)
+                    o.Write(new string(' ', OptionWidth - written));
+                else
+                {
+                    o.WriteLine();
+                    o.Write(new string(' ', OptionWidth));
+                }
 
-		const int OptionWidth = 29;
+                o.WriteLine(p.Description);
+            }
+        }
 
-		public void WriteOptionDescriptions (TextWriter o)
-		{
-			foreach (Option p in this) {
-				List<string> names = new List<string> (GetOptionNames (p.Prototypes));
-
-				int written = 0;
-				if (names [0].Length == 1) {
-					Write (o, ref written, "  -");
-					Write (o, ref written, names [0]);
-				}
-				else {
-					Write (o, ref written, "      --");
-					Write (o, ref written, names [0]);
-				}
-
-				for (int i = 1; i < names.Count; ++i) {
-					Write (o, ref written, ", ");
-					Write (o, ref written, names [i].Length == 1 ? "-" : "--");
-					Write (o, ref written, names [i]);
-				}
-
-				if (p.OptionValue == OptionValue.Optional)
-					Write (o, ref written, "[=VALUE]");
-				else if (p.OptionValue == OptionValue.Required)
-					Write (o, ref written, "=VALUE");
-
-				if (written < OptionWidth)
-					o.Write (new string (' ', OptionWidth - written));
-				else {
-					o.WriteLine ();
-					o.Write (new string (' ', OptionWidth));
-				}
-
-				o.WriteLine (p.Description);
-			}
-		}
-
-		static void Write (TextWriter o, ref int n, string s)
-		{
-			n += s.Length;
-			o.Write (s);
-		}
-	}
+        private static void Write(TextWriter o, ref int n, string s)
+        {
+            n += s.Length;
+            o.Write(s);
+        }
+    }
 }
 
 #if TEST
@@ -651,4 +637,3 @@ namespace MonoTests.Mono.Documentation {
 	}
 }
 #endif
-

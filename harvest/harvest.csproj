@@ -51,6 +51,7 @@
     <Compile Include="InvalidConfigFileExtractionPoint.cs" />
     <Compile Include="IParser.cs" />
     <Compile Include="MetaDataElement.cs" />
+    <Compile Include="Option.cs" />
     <Compile Include="Options.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

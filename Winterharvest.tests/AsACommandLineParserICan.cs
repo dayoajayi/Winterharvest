@@ -25,7 +25,7 @@ namespace Winterharvest.tests
         public  void AndReturnListOfCommandLineArguments()
         {
             //TODO
-            Assert.IsTrue(true);
+            _commandLineParser.Parse(new CommandLine());
         }
 
 
