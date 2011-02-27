@@ -1,3 +1,4 @@
+using System.Linq;
 using harvest;
 using NUnit.Framework;
 using System.Collections.Generic;
@@ -22,17 +23,17 @@ namespace Winterharvest.tests
         }
 
         [Test]
-        public void CanCallTheParseMethod()
+        public void CanStepIntoTheParseMethodIfICallToListOnTheIEnumberableItReturns()
         {
-            var bobsYourUncle = new List<string> {"--", "blah", "blah"};
+            string valueThatIsIgnoredByParseMethod = "--";
+
+            var bobsYourUncle = new List<string> { valueThatIsIgnoredByParseMethod, "blah", "blah" };
 
             Assert.IsNotNull(_options.Parse(bobsYourUncle));
-            IEnumerable<string> result = _options.Parse(bobsYourUncle);
-            if (result is List<string>)
-            {
-                Assert.Fail();
-            }
-            //Assert.AreEqual(0,result.GetEnumerator());
+            IEnumerable<string> result = _options.Parse(bobsYourUncle).ToList();
+
+            Assert.AreEqual(2, result.Count());
+
 
         }
 
