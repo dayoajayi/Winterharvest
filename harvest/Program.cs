@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace harvest
 {
@@ -11,9 +12,21 @@ namespace harvest
             o.Add("d", s => {
                                Console.WriteLine("bob");
                            });
-           
-            IEnumerable<string> a=  o.Parse(new string[] {"/d"});
-            var b = o.Parse(new[] {"a"});
+            o.Add("h", s =>
+                           {
+                               Console.WriteLine("This is the help menu");
+
+                           });
+
+            IEnumerable<string> a = o.Parse(args);
+            
+            var result = a.ToList();
+
+            foreach (var x in result)
+            {
+                Console.WriteLine(x);
+            }
+            
         }
     }
 }
