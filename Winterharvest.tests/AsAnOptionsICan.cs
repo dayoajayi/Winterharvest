@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using harvest;
 using NUnit.Framework;
@@ -14,6 +15,7 @@ namespace Winterharvest.tests
         public void BeSetup()
         {
             _options = new Options();
+
         }
 
         [Test]
@@ -27,15 +29,19 @@ namespace Winterharvest.tests
         {
             string valueThatIsIgnoredByParseMethod = "--";
 
-            var bobsYourUncle = new List<string> { valueThatIsIgnoredByParseMethod, "blah", "blah" };
+            var bobsYourUncle = new List<string> { valueThatIsIgnoredByParseMethod, "blah", "blah2" };
 
             Assert.IsNotNull(_options.Parse(bobsYourUncle));
-            IEnumerable<string> result = _options.Parse(bobsYourUncle).ToList();
+            List<string> result = _options.Parse(bobsYourUncle).ToList();
 
             Assert.AreEqual(2, result.Count());
-
-
+            Assert.AreEqual("blah", result[0]);
+            Assert.AreEqual("blah2", result[1]);
         }
+
+
+
+
 
 
     }

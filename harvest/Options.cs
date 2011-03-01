@@ -110,12 +110,9 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Globalization;
 using System.IO;
 using System.Text.RegularExpressions;
-
-#if TEST
-using Mono.Documentation;
-#endif
 
 namespace harvest
 {
@@ -128,11 +125,11 @@ namespace harvest
 
     public class Options : Collection<Option>
     {
-        private Dictionary<string, Option> options = new Dictionary<string, Option>();
+        private readonly Dictionary<string, Option> _options = new Dictionary<string, Option>();
 
         protected override void ClearItems()
         {
-            this.options.Clear();
+            _options.Clear();
         }
 
         protected override void InsertItem(int index, Option item)
@@ -146,7 +143,7 @@ namespace harvest
             Option p = Items[index];
             foreach (string name in GetOptionNames(p.Prototypes))
             {
-                this.options.Remove(name);
+                this._options.Remove(name);
             }
             base.RemoveItem(index);
         }
@@ -162,33 +159,33 @@ namespace harvest
         {
             foreach (string name in GetOptionNames(option.Prototypes))
             {
-                this.options.Add(name, option);
+                _options.Add(name, option);
             }
             return this;
         }
 
-        public Options Add(string optionsHidesField, Action<string> action)
+        public Options Add(string options, Action<string> action)
         {
-            return Add(optionsHidesField, null, action);
+            return Add(options, null, action);
         }
 
-        public Options Add(string optionsHidesField, string description, Action<string> action)
+        public Options Add(string options, string description, Action<string> action)
         {
-            Option p = new Option(optionsHidesField, description, action);
+            Option p = new Option(options, description, action);
             base.Add(p);
             return this;
         }
 
-        public Options Add<T>(string optionsHidesField, Action<T> action)
+        public Options Add<T>(string options, Action<T> action)
         {
-            return Add(optionsHidesField, null, action);
+            return Add(options, null, action);
         }
 
-        public Options Add<T>(string optionsHidesField, string description, Action<T> action)
+        public Options Add<T>(string options, string description, Action<T> action)
         {
             TypeConverter c = TypeDescriptor.GetConverter(typeof (T));
             Action<string> a = delegate(string s) { action(s != null ? (T) c.ConvertFromString(s) : default(T)); };
-            return Add(optionsHidesField, description, a);
+            return Add(options, description, a);
         }
 
         private static readonly char[] NameTerminator = new char[] {'=', ':'};
@@ -245,14 +242,14 @@ namespace harvest
                     do
                     {
                         Option p2;
-                        if (this.options.TryGetValue(n, out p2))
-                        {
+                        if (_options.TryGetValue(n, out p2))
+                       { 
                             p = p2;
                             break;
                         }
                         // no match; is it a bool option?
                         if (n.Length >= 1 && (n[n.Length - 1] == '+' || n[n.Length - 1] == '-') &&
-                            this.options.TryGetValue(n.Substring(0, n.Length - 1), out p2))
+                            _options.TryGetValue(n.Substring(0, n.Length - 1), out p2))
                         {
                             v = n[n.Length - 1] == '+' ? n : null;
                             p2.Action(v);
@@ -260,7 +257,7 @@ namespace harvest
                             break;
                         }
                         // is it a bundled option?
-                        if (f == "-" && this.options.TryGetValue(n[0].ToString(), out p2))
+                        if (f == "-" && _options.TryGetValue(n[0].ToString(), out p2))
                         {
                             int i = 0;
                             do
@@ -270,7 +267,7 @@ namespace harvest
                                         string.Format("Unsupported using bundled option '{0}' that requires a value",
                                                       n[i]));
                                 p2.Action(n);
-                            } while (++i < n.Length && this.options.TryGetValue(n[i].ToString(), out p2));
+                            } while (++i < n.Length && _options.TryGetValue(n[i].ToString(), out p2));
                         }
 
                         // not a know option; either a value for a previous option
@@ -374,266 +371,3 @@ namespace harvest
         }
     }
 }
-
-#if TEST
-namespace MonoTests.Mono.Documentation {
-	using System.Linq;
-
-	class FooConverter : TypeConverter {
-		public override bool CanConvertFrom (ITypeDescriptorContext context, Type sourceType)
-		{
-			if (sourceType == typeof (string))
-				return true;
-			return base.CanConvertFrom (context, sourceType);
-		}
-
-		public override object ConvertFrom (ITypeDescriptorContext context,
-				CultureInfo culture, object value)
-		{
-			string v = value as string;
-			if (v != null) {
-				switch (v) {
-					case "A": return Foo.A;
-					case "B": return Foo.B;
-				}
-			}
-
-			return base.ConvertFrom (context, culture, value);
-		}
-	}
-
-	[TypeConverter (typeof(FooConverter))]
-	class Foo {
-		public static readonly Foo A = new Foo ("A");
-		public static readonly Foo B = new Foo ("B");
-		string s;
-		Foo (string s) { this.s = s; }
-		public override string ToString () {return s;}
-	}
-
-	class Test {
-		public static void Main (string[] args)
-		{
-			var tests = new Dictionary<string, Action> () {
-				{ "boolean",      () => CheckBoolean () },
-				{ "bundling",     () => CheckOptionBundling () },
-				{ "descriptions", () => CheckWriteOptionDescriptions () },
-				{ "exceptions",   () => CheckExceptions () },
-				{ "halt",         () => CheckHaltProcessing () },
-				{ "many",         () => CheckMany () },
-				{ "optional",     () => CheckOptional () },
-				{ "required",     () => CheckRequired () },
-			};
-			bool help = false;
-			var p = new Options () {
-				{ "t|test=", 
-					"Run the specified test.  Valid tests:\n" + new string (' ', 32) +
-						string.Join ("\n" + new string (' ', 32), tests.Keys.OrderBy (s => s).ToArray ()),
-					(v) => { Console.WriteLine (v); tests [v] (); } },
-				{ "h|?|help", "Show this message and exit", (v) => help = v != null },
-			};
-			p.Parse (args).ToArray ();
-			if (help) {
-				Console.WriteLine ("usage: Options.exe [OPTION]+\n");
-				Console.WriteLine ("Options unit test program.");
-				Console.WriteLine ("Valid options include:");
-				p.WriteOptionDescriptions (Console.Out);
-			} else {
-				foreach (Action a in tests.Values)
-					a ();
-			}
-		}
-
-		static IEnumerable<string> _ (params string[] a)
-		{
-			return a;
-		}
-
-		static void CheckRequired ()
-		{
-			string a = null;
-			int n = 0;
-			Options p = new Options () {
-				{ "a=", (v) => a = v },
-				{ "n=", (int v) => n = v },
-			};
-			string[] extra = p.Parse (_("a", "-a", "s", "-n=42", "n")).ToArray ();
-			Assert (extra [0], "a");
-			Assert (extra [1], "n");
-			Assert (a, "s");
-			Assert (n, 42);
-		}
-
-		static void CheckOptional ()
-		{
-			string a = null;
-			int n = -1;
-			Foo f = null;
-			Options p = new Options () {
-				{ "a:", (v) => a = v },
-				{ "n:", (int v) => n = v },
-				{ "f:", (Foo v) => f = v },
-			};
-			p.Parse (_("-a=s")).ToArray ();
-			Assert (a, "s");
-			p.Parse (_("-a")).ToArray ();
-			Assert (a, null);
-
-			p.Parse (_("-f", "A")).ToArray ();
-			Assert (f, Foo.A);
-			p.Parse (_("-f")).ToArray ();
-			Assert (f, null);
-
-			p.Parse (_("-n", "42")).ToArray ();
-			Assert (n, 42);
-			p.Parse (_("-n")).ToArray ();
-			Assert (n, 0);
-		}
-
-		static void CheckBoolean ()
-		{
-			bool a = false;
-			Options p = new Options () {
-				{ "a", (v) => a = v != null },
-			};
-			p.Parse (_("-a")).ToArray ();
-			Assert (a, true);
-			p.Parse (_("-a+")).ToArray ();
-			Assert (a, true);
-			p.Parse (_("-a-")).ToArray ();
-			Assert (a, false);
-		}
-
-		static void CheckMany ()
-		{
-			int a = -1, b = -1;
-			string av = null, bv = null;
-			Foo f = null;
-			int help = 0;
-			int verbose = 0;
-			Options p = new Options () {
-				{ "a=", (v) => { a = 1; av = v; } },
-				{ "b", "desc", (v) => {b = 2; bv = v;} },
-				{ "f=", (Foo v) => f = v },
-				{ "v", (v) => { ++verbose; } },
-				{ "h|?|help", (v) => { switch (v) {
-					case "h": help |= 0x1; break; 
-					case "?": help |= 0x2; break;
-					case "help": help |= 0x4; break;
-				} } },
-			};
-			string[] e = p.Parse (new string[]{"foo", "-v", "-a=42", "/b-",
-				"-a", "64", "bar", "--f", "B", "/h", "-?", "--help", "-v"}).ToArray ();
-
-			Assert (e.Length, 2);
-			Assert (e[0], "foo");
-			Assert (e[1], "bar");
-			Assert (a, 1);
-			Assert (av, "64");
-			Assert (b, 2);
-			Assert (bv, null);
-			Assert (verbose, 2);
-			Assert (help, 0x7);
-			Assert (f, Foo.B);
-		}
-
-		static void Assert<T>(T actual, T expected)
-		{
-			if (!object.Equals (actual, expected))
-				throw new InvalidOperationException (
-					string.Format ("Assertion failed: {0} != {1}", actual, expected));
-		}
-
-		static void CheckExceptions ()
-		{
-			string a = null;
-			var p = new Options () {
-				{ "a=", (v) => a = v },
-				{ "c",  (v) => { } },
-			};
-			// missing argument
-			AssertException (typeof(InvalidOperationException), p, 
-				(v) => { v.Parse (_("-a")).ToArray (); });
-			// another named option while expecting one
-			AssertException (typeof(InvalidOperationException), p, 
-				(v) => { v.Parse (_("-a", "-a")).ToArray (); });
-			// no exception when an unregistered named option follows.
-			AssertException (null, p, 
-				(v) => { v.Parse (_("-a", "-b")).ToArray (); });
-			Assert (a, "-b");
-
-			// try to bundle with an option requiring a value
-			AssertException (typeof(InvalidOperationException), p,
-				(v) => { v.Parse (_("-ca", "value")).ToArray (); });
-		}
-
-		static void AssertException<T> (Type exception, T a, Action<T> action)
-		{
-			Type actual = null;
-			string stack = null;
-			try {
-				action (a);
-			}
-			catch (Exception e) {
-				actual = e.GetType ();
-				if (!object.Equals (actual, exception))
-					stack = e.ToString ();
-			}
-			if (!object.Equals (actual, exception)) {
-				throw new InvalidOperationException (
-					string.Format ("Assertion failed: Expected Exception Type {0}, got {1}.\n" +
-						"Actual Exception: {2}", exception, actual, stack));
-			}
-		}
-
-		static void CheckWriteOptionDescriptions ()
-		{
-			var p = new Options () {
-				{ "p|indicator-style=", "append / indicator to directories", (v) => {} },
-				{ "color:", "controls color info", (v) => {} },
-				{ "h|?|help", "show help text", (v) => {} },
-				{ "version", "output version information and exit", (v) => {} },
-			};
-
-			StringWriter expected = new StringWriter ();
-			expected.WriteLine ("  -p, --indicator-style=VALUE");
-			expected.WriteLine ("                             append / indicator to directories");
-			expected.WriteLine ("      --color[=VALUE]        controls color info");
-			expected.WriteLine ("  -h, -?, --help             show help text");
-			expected.WriteLine ("      --version              output version information and exit");
-
-			StringWriter actual = new StringWriter ();
-			p.WriteOptionDescriptions (actual);
-
-			Assert (actual.ToString (), expected.ToString ());
-		}
-
-		static void CheckOptionBundling ()
-		{
-			string a, b, c;
-			a = b = c = null;
-			var p = new Options () {
-				{ "a", (v) => a = "a" },
-				{ "b", (v) => b = "b" },
-				{ "c", (v) => c = "c" },
-			};
-			p.Parse (_ ("-abc")).ToArray ();
-			Assert (a, "a");
-			Assert (b, "b");
-			Assert (c, "c");
-		}
-
-		static void CheckHaltProcessing ()
-		{
-			var p = new Options () {
-				{ "a", (v) => {} },
-				{ "b", (v) => {} },
-			};
-			string[] e = p.Parse (_ ("-a", "-b", "--", "-a", "-b")).ToArray ();
-			Assert (e.Length, 2);
-			Assert (e [0], "-a");
-			Assert (e [1], "-b");
-		}
-	}
-}
-#endif

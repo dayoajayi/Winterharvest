@@ -8,25 +8,21 @@ namespace harvest
     {
         static void Main(string[] args)
         {
-            var o = new Options();
-            o.Add("d", s => {
-                               Console.WriteLine("bob");
-                           });
-            o.Add("h", s =>
-                           {
-                               Console.WriteLine("This is the help menu");
 
-                           });
 
-            IEnumerable<string> a = o.Parse(args);
-            
-            var result = a.ToList();
+            var options = new Options();
 
-            foreach (var x in result)
-            {
-                Console.WriteLine(x);
-            }
-            
+            options.Add("h", s => Console.WriteLine("This is the help text"));
+            options.Parse(new[] {"-h"}).ToList();
+            Console.ReadKey();
+
+            // Action<T> works like a sub, or a void method: takes T as a param
+            // Action<T1,T2> void method that takes two parameters
+            // Func<T> it's a lambda that returns T
+            // Func<T1,T2> takes T1, and returns T2
+            // var x = 
+
+
         }
     }
 }

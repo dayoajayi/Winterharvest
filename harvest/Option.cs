@@ -8,11 +8,11 @@ namespace harvest
 
         public Option(string prototype, string description, Action<string> action)
         {
-            this.Prototype = prototype;
-            this.Prototypes = prototype.Split('|');
-            this.Description = description;
-            this.Action = action;
-            this.type = GetOptionValue();
+            Prototype = prototype;
+            Prototypes = prototype.Split('|');
+            Description = description;
+            Action = action;
+            type = GetOptionValue();
         }
 
         public string Prototype { get; private set; }
