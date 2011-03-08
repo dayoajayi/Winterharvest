@@ -8,21 +8,39 @@ namespace harvest
     {
         static void Main(string[] args)
         {
+            var help = true;
+            bool CallJimsExtractionMethod = false;
+            var options = new Options{
+                {"?|help|h", "Prints out the options.", option => help = option != null},
+                {"d=|db=|database=|databasename=","REQUIRED: DatabaseName - the database you want to harvest",option => CallJimsExtractionMethod = true},
+                {"web=|server=|webserver=", "REQUIRED: WebserverName = the web project that you want to harvest",option => CallJimsExtractionMethod = true}};
 
+            if(help)
+            {
+                const string usageMessage =
+                    "harvest web -d[atabase] VALUE -NHibernate -masstransit";
+                ShowHelp(usageMessage,options);
+            }
 
-            var options = new Options();
-
-            options.Add("h", s => Console.WriteLine("This is the help text"));
-            options.Parse(new[] {"-h"}).ToList();
-            Console.ReadKey();
-
-            // Action<T> works like a sub, or a void method: takes T as a param
-            // Action<T1,T2> void method that takes two parameters
-            // Func<T> it's a lambda that returns T
-            // Func<T1,T2> takes T1, and returns T2
-            // var x = 
-
-
+            try
+            {
+                options.Parse(args).ToList();
+            }
+            catch(OptionException)
+            {
+                ShowHelp("Error - usage is: ", options);
+            }   
         }
+
+        private static void ShowHelp(string message, Options options)
+        {
+            Console.Error.WriteLine(message);
+            options.WriteOptionDescriptions(Console.Error);
+            Environment.Exit(-1);
+        }
+    }
+
+    internal class OptionException : Exception
+    {
     }
 }

@@ -4,7 +4,7 @@ namespace harvest
 {
     public class Option
     {
-        private OptionValue type;
+        private readonly OptionValue _type;
 
         public Option(string prototype, string description, Action<string> action)
         {
@@ -12,7 +12,7 @@ namespace harvest
             Prototypes = prototype.Split('|');
             Description = description;
             Action = action;
-            type = GetOptionValue();
+            _type = GetOptionValue();
         }
 
         public string Prototype { get; private set; }
@@ -25,7 +25,7 @@ namespace harvest
 
         internal OptionValue OptionValue
         {
-            get { return type; }
+            get { return _type; }
         }
 
         private OptionValue GetOptionValue()

@@ -14,8 +14,12 @@ namespace Winterharvest.tests
         [SetUp]
         public void BeSetup()
         {
-            _options = new Options();
-
+            _options = new Options
+                           {
+                               {"h", parameter => Console.WriteLine("This is the help text")},
+                               {"web", parameter => Console.WriteLine("You are about to harvest a web project")},
+                               {"db", parameter => Console.WriteLine("You are about to harvest a databaseproject")}
+                           };
         }
 
         [Test]
@@ -39,6 +43,25 @@ namespace Winterharvest.tests
             Assert.AreEqual("blah2", result[1]);
         }
 
+        [Test]
+        public void CanCheckForRequiredArguments()
+        {
+            var allowedOptions = new List<string> {"h", "web", "db"};
+            _options.Parse(new[] {"-h", "-web", "-db"}).ToList();
+            Assert.Contains("web", allowedOptions,"must contain one of the items in allowedOptions");
+        }
+
+        [Test]
+        public  void CanCheckForOptionalArguments()
+        {
+            //TODO
+        }
+
+        [Test]
+        public    void CanEnforceWebOrDatabaseHarvesting()
+        {
+            //TODO
+        }
 
 
 
